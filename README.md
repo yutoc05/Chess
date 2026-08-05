@@ -1,47 +1,42 @@
-# Chess (Greenfoot)
+<a id="readme-top"></a>
 
-A local multiplayer chess game implemented in Java using the Greenfoot framework.
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/yutoc05/JavaChess">
+    <img src="images/icon.png" alt="Logo" width="80" height="80">
+  </a>
 
-<img width="1000" height="1000" alt="Chess game screenshot" src="https://github.com/user-attachments/assets/ad0f321f-baa6-48a3-b641-64a424ae7239" />
+<h3 align="center">JavaChess</h3>
 
-## Overview
+  <p align="center">
+    JavaChess is a 2D Chess game built using Java.
+  </p>
+</div>
 
-This project runs on an 8x8 board (`MyWorld`) and supports turn-based play between white and black using drag-and-drop piece movement.
+<!-- ABOUT THE PROJECT -->
 
-## Features
+## About The Project
 
-- Standard chess piece movement rules
-- Turn enforcement (white moves first)
-- Captures
-- Check detection
-- Castling (short and long)
-- En passant
-- Pawn promotion (queen, rook, bishop, knight)
-- Local two-player gameplay
+![JavaChess Screen Shot][JavaChess-screenshot]
 
-## Tech Stack
+Eat all of the dots while avoiding the four ghosts who pursue Pac-Man. When Pac-Man eats all of the dots, you advance to the next level. If Pac-Man is caught by a ghost, he loses a life; the game ends when all lives are lost. Each of the four ghosts has its own unique AI. The game increases in difficulty as the player progresses.
 
-- Java
-- Greenfoot scenario project (`project.greenfoot`)
+### Built With
 
-## Project Structure
+![Java][Java]
 
-- `MyWorld.java` – board setup and initial piece placement
-- `Piece.java` – shared movement, capture, and check validation logic
-- `WhitePiece.java` / `BlackPiece.java` – side-specific drag/turn behavior
-- `W*.java` and `B*.java` – concrete piece implementations
-- `images/` – piece and tile sprites
-- `project.greenfoot` – Greenfoot project configuration
+<!-- USAGE EXAMPLES -->
 
-## How to Run
+## Usage
 
-1. Install Greenfoot.
-2. Open this repository folder as a Greenfoot scenario.
-3. Open `MyWorld` as the world class (if not already selected).
-4. Click **Run** to start the game.
+- Click and drag pieces to their desired squares
 
-## Controls
+<!-- MARKDOWN LINKS & IMAGES -->
+<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
 
-- Click and drag a piece to a target square.
-- Release to attempt the move.
-- Invalid moves are automatically reverted.
+[JavaChess-screenshot]: images/screenshot.png
+
+<!-- Shields.io badges. You can a comprehensive list with many more badges at: https://github.com/inttter/md-badges -->
+
+[Java]: https://img.shields.io/badge/Java-%23ED8B00.svg?style=for-the-badge&logo=openjdk&logoColor=white
