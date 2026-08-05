@@ -23,10 +23,10 @@ public class Pawn extends Piece {
                     if (moveAccepted) {
                         moved = true;
                     }
-                } else if (currentX == getX() && getY() == currentY + 2 * direction && !moved) {
+                } else if (currentX == getX() && getY() == currentY + 2 * direction
+                        && !moved && currentY == (colour == WHITE ? 6 : 1)) {
                     moveAccepted = move(false);
                     if (moveAccepted) {
-                        moved = true;
                         enPassantable = true;
                     }
                 } else if ((currentX == getX() + 1 || currentX == getX() - 1)
@@ -53,6 +53,9 @@ public class Pawn extends Piece {
                 setLocation(currentX, currentY);
             }
 
+            if (moveAccepted) {
+                moved = true;
+            }
             if (moveAccepted && getY() == (colour == WHITE ? 0 : 7)) {
                 String choice = Greenfoot.ask(
                     "Choose a piece for promotion: Queen, Rook, Bishop, or Knight");

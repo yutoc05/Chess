@@ -59,6 +59,18 @@ public class Piece extends Actor {
         revokeCastleLong(side);
     }
 
+    private static void revokeCornerRight(int side, int x, int y) {
+        int homeY = side == WHITE ? 7 : 0;
+        if (y != homeY) {
+            return;
+        }
+        if (x == 0) {
+            revokeCastleLong(side);
+        } else if (x == 7) {
+            revokeCastleShort(side);
+        }
+    }
+
     public static boolean isCheckmate() {
         return checkmate;
     }
@@ -109,31 +121,41 @@ public class Piece extends Actor {
     }
 
     public boolean move(boolean enPassant) {
+        Actor enPassantCaptured = null;
+        int capturedX = -1;
+        int capturedY = -1;
         if (enPassant) {
             Actor captured = getOneObjectAtOffset(0, -forwardDirection(), Pawn.class);
-            if (captured instanceof Pawn && ((Pawn) captured).colour == -colour) {
-                getWorld().removeObject(captured);
+            if (!(captured instanceof Pawn)
+                    || ((Pawn) captured).colour != -colour
+                    || !((Pawn) captured).enPassantable) {
+                setLocation(currentX, currentY);
+                return false;
             }
+            enPassantCaptured = captured;
+            capturedX = captured.getX();
+            capturedY = captured.getY();
+            getWorld().removeObject(captured);
         }
         if (!inCheck()) {
+            int fromX = currentX;
+            int fromY = currentY;
             currentX = getX();
             currentY = getY();
             turn *= -1;
             clearEnPassantFlags();
             if (this instanceof King) {
                 revokeCastling(colour);
+            } else if (this instanceof Rook) {
+                revokeCornerRight(colour, fromX, fromY);
             }
             if (!(this instanceof Pawn)) {
                 updateGameState();
             }
             return true;
         }
-        if (enPassant) {
-            int restoredColour = -colour;
-            Pawn restored = new Pawn(restoredColour);
-            getWorld().addObject(restored, getX(), getY() - forwardDirection());
-            restored.currentX = restored.getX();
-            restored.currentY = restored.getY();
+        if (enPassantCaptured != null) {
+            getWorld().addObject(enPassantCaptured, capturedX, capturedY);
         }
         setLocation(currentX, currentY);
         return false;
@@ -157,56 +179,33 @@ public class Piece extends Actor {
         }
 
         Piece capturedPiece = (Piece) actor;
-        boolean moved = false;
-        boolean enPassantable = false;
-        if (capturedPiece instanceof Pawn) {
-            moved = ((Pawn) capturedPiece).moved;
-            enPassantable = ((Pawn) capturedPiece).enPassantable;
-        }
-        removeTouching(Piece.class);
+        int fromX = currentX;
+        int fromY = currentY;
+        int capturedX = capturedPiece.getX();
+        int capturedY = capturedPiece.getY();
+        getWorld().removeObject(capturedPiece);
         if (!inCheck()) {
             currentX = getX();
             currentY = getY();
             turn *= -1;
             clearEnPassantFlags();
+            if (this instanceof King) {
+                revokeCastling(colour);
+            } else if (this instanceof Rook) {
+                revokeCornerRight(colour, fromX, fromY);
+            }
+            if (capturedPiece instanceof Rook) {
+                revokeCornerRight(capturedPiece.colour, capturedX, capturedY);
+            }
             if (!(this instanceof Pawn)) {
                 updateGameState();
             }
             return true;
         }
 
-        Piece restored = createPiece(capturedPiece.getClass(), -colour);
-        getWorld().addObject(restored, getX(), getY());
-        restored.currentX = restored.getX();
-        restored.currentY = restored.getY();
-        if (restored instanceof Pawn) {
-            ((Pawn) restored).moved = moved;
-            ((Pawn) restored).enPassantable = enPassantable;
-        }
+        getWorld().addObject(capturedPiece, capturedX, capturedY);
         setLocation(currentX, currentY);
         return false;
-    }
-
-    private Piece createPiece(Class<?> pieceClass, int side) {
-        if (pieceClass == Pawn.class) {
-            return new Pawn(side);
-        }
-        if (pieceClass == Rook.class) {
-            return new Rook(side);
-        }
-        if (pieceClass == Knight.class) {
-            return new Knight(side);
-        }
-        if (pieceClass == Bishop.class) {
-            return new Bishop(side);
-        }
-        if (pieceClass == Queen.class) {
-            return new Queen(side);
-        }
-        if (pieceClass == King.class) {
-            return new King(side);
-        }
-        throw new IllegalArgumentException("Unknown piece class: " + pieceClass);
     }
 
     public boolean inCheck() {
@@ -355,7 +354,7 @@ public class Piece extends Actor {
                     return true;
                 }
                 if (dx == 0 && destination == null && distance == 2
-                        && pawnHasNotMoved(piece)
+                        && pawnHasNotMoved(piece, fromY)
                         && board[fromX][fromY + direction] == null) {
                     return true;
                 }
@@ -387,8 +386,9 @@ public class Piece extends Actor {
             return false;
         }
 
-        private boolean pawnHasNotMoved(Piece piece) {
-            return piece instanceof Pawn && !((Pawn) piece).moved;
+        private boolean pawnHasNotMoved(Piece piece, int fromY) {
+            return piece instanceof Pawn && !((Pawn) piece).moved
+                && fromY == (piece.colour == WHITE ? 6 : 1);
         }
 
         private boolean isEnPassantPawn(Piece piece, int expectedColour) {
