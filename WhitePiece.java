@@ -7,7 +7,7 @@ public class WhitePiece extends Piece
     static boolean inCheck = false;
 
     public boolean dragging() {
-        if (Greenfoot.mousePressed(this) && turn == 1) {
+        if (Greenfoot.mousePressed(this) && turn == 1 && !gameOver) {
             isDragging = true;
         }
         if (isDragging) {

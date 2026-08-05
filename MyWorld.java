@@ -12,6 +12,10 @@ public class MyWorld extends World
         Piece.turn = 1;
         WhitePiece.canCastleShort = true;
         WhitePiece.canCastleLong = true;
+        Piece.checkmate = false;
+        Piece.stalemate = false;
+        Piece.gameOver = false;
+        Piece.winner = 0;
         WhitePiece.inCheck = false;
         BlackPiece.canCastleShort = true;
         BlackPiece.canCastleLong = true;
