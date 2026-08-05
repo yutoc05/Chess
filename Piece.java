@@ -1,346 +1,415 @@
-import greenfoot.*;  // (World, Actor, GreenfootImage, Greenfoot and MouseInfo)
+import greenfoot.*;
 import java.util.List;
-import java.io.*; 
-public class Piece extends Actor
-{
+
+public class Piece extends Actor {
     static int turn = 1; // white is 1, black is -1
-    int colour = 0; // white is 1, black is -1
+    static boolean checkmate = false;
+    static boolean stalemate = false;
+    static boolean gameOver = false;
+    static int winner = 0;
+    int colour = 0;
     int currentX = 0;
     int currentY = 0;
 
-    public int moveType() { // 0=invalid,1=std move,2=capture
+    public static boolean isCheckmate() {
+        return checkmate;
+    }
+
+    public static boolean isStalemate() {
+        return stalemate;
+    }
+
+    public static int getWinner() {
+        return winner;
+    }
+
+    public int moveType() {
         if (!(this instanceof WKnight) && !(this instanceof BKnight)) {
-            int moveDistance = Math.max(Math.abs(getX() - currentX), Math.abs(getY() - currentY));
-            for (int i = 1; i < moveDistance; ++i) {
-                if ((getX() < currentX) && (getY() < currentY)) {
-                    if (getOneObjectAtOffset(i, i, Piece.class) != null) {
-                        return 0;
-                    }
-                } else if ((getX() < currentX) && (getY() > currentY)) {
-                    if (getOneObjectAtOffset(i, -i, Piece.class) != null) {
-                        return 0;
-                    }
-                } else if ((getX() > currentX) && (getY() > currentY)) {
-                    if (getOneObjectAtOffset(-i, -i, Piece.class) != null) {
-                        return 0;
-                    }
-                } else if ((getX() > currentX) && (getY() < currentY)) {
-                    if (getOneObjectAtOffset(-i, i, Piece.class) != null) {
-                        return 0;
-                    }
-                } else if (getX() < currentX) {
-                    if (getOneObjectAtOffset(i, 0, Piece.class) != null) {
-                        return 0;
-                    }
-                } else if (getX() > currentX) {
-                    if (getOneObjectAtOffset(-i, 0, Piece.class) != null) {
-                        return 0;
-                    }
-                } else if (getY() < currentY) {
-                    if (getOneObjectAtOffset(0, i, Piece.class) != null) {
-                        return 0;
-                    }
-                } else if (getY() > currentY) {
-                    if (getOneObjectAtOffset(0, -i, Piece.class) != null) {
-                        return 0;
-                    }
+            int distance = Math.max(Math.abs(getX() - currentX), Math.abs(getY() - currentY));
+            int dx = Integer.signum(getX() - currentX);
+            int dy = Integer.signum(getY() - currentY);
+            for (int i = 1; i < distance; i++) {
+                int pathX = currentX + dx * i;
+                int pathY = currentY + dy * i;
+                if (!getWorld().getObjectsAt(pathX, pathY, Piece.class).isEmpty()) {
+                    return 0;
                 }
             }
         }
         Actor actor = getOneIntersectingObject(Piece.class);
-        if (actor != null && actor instanceof Piece) {
-            Piece piece = (Piece) actor;
-            if (piece.colour == this.colour) {
-                return 0;
-            }
-            return 2;
+        if (actor instanceof Piece && ((Piece) actor).colour == colour) {
+            return 0;
         }
-        return 1;
+        return actor instanceof Piece ? 2 : 1;
     }
 
-    public void move(boolean enPassant) {
+    public boolean move(boolean enPassant) {
         if (enPassant) {
-            Actor wActor = getOneObjectAtOffset(0, -1, WPawn.class);
-            Actor bActor = getOneObjectAtOffset(0, 1, BPawn.class);
-            if (turn == -1 && wActor != null) {
-                WPawn wPawn = (WPawn) wActor;
-                getWorld().removeObject(wPawn);
-            } else if (turn == 1 && bActor != null) {
-                BPawn bPawn = (BPawn) bActor;
-                getWorld().removeObject(bPawn);
+            Actor captured = turn == -1
+                ? getOneObjectAtOffset(0, -1, WPawn.class)
+                : getOneObjectAtOffset(0, 1, BPawn.class);
+            if (captured != null) {
+                getWorld().removeObject(captured);
             }
         }
         if (!inCheck()) {
             currentX = getX();
             currentY = getY();
             turn *= -1;
-            if (!enPassant) {
-                List<WPawn> wPawns = getWorld().getObjects(WPawn.class);
-                for (WPawn pawn : wPawns) {
-                    pawn.enPassantable = false;
-                }
-                List<BPawn> bPawns = getWorld().getObjects(BPawn.class);
-                for (BPawn pawn : bPawns) {
-                    pawn.enPassantable = false;
-                }
-            }
+            clearEnPassantFlags();
             if (getClass() == WKing.class) {
                 WhitePiece.canCastleShort = false;
                 WhitePiece.canCastleLong = false;
-                setLocation(currentX, currentY);
             } else if (getClass() == BKing.class) {
                 BlackPiece.canCastleShort = false;
                 BlackPiece.canCastleLong = false;
-                setLocation(currentX, currentY);
             }
-        } else if (enPassant) {
-            try {
-                if (turn == 1) {
-                    BPawn bPawn = new BPawn();
-                    getWorld().addObject(bPawn, getX(), getY() + 1);
-                    bPawn.colour = -1;
-                    bPawn.currentX = bPawn.getX();
-                    bPawn.currentY = bPawn.getY();
-                    bPawn.moved = true;
-                    bPawn.enPassantable = true;
-                } else {
-                    WPawn wPawn = new WPawn();
-                    getWorld().addObject(wPawn, getX(), getY() - 1);
-                    wPawn.colour = 1;
-                    wPawn.currentX = wPawn.getX();
-                    wPawn.currentY = wPawn.getY();
-                    wPawn.moved = true;
-                    wPawn.enPassantable = true;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
+            if (!(this instanceof WPawn) && !(this instanceof BPawn)) {
+                updateGameState();
             }
-            setLocation(currentX, currentY);
-        } else {
-            setLocation(currentX, currentY);
+            return true;
         }
+        if (enPassant) {
+            int restoredColour = turn == 1 ? -1 : 1;
+            Piece restored = restoredColour == 1 ? new WPawn() : new BPawn();
+            getWorld().addObject(restored, getX(), getY() + (turn == 1 ? 1 : -1));
+            restored.colour = restoredColour;
+            restored.currentX = restored.getX();
+            restored.currentY = restored.getY();
+        }
+        setLocation(currentX, currentY);
+        return false;
     }
 
-    public void capture(boolean enPassant) {
-        Actor actor = getOneIntersectingObject(Piece.class);
-        Class<? extends Piece> pieceClass = actor.getClass().asSubclass(Piece.class);
-        boolean deletedMoved = false;
-        boolean deletedEnPassantable = false;
-        if (pieceClass == WPawn.class) {
-            WPawn wPawn = (WPawn) actor;
-            deletedMoved = wPawn.moved;
-            deletedEnPassantable = wPawn.enPassantable;
+    void clearEnPassantFlags() {
+        for (WPawn pawn : getWorld().getObjects(WPawn.class)) {
+            pawn.enPassantable = false;
         }
-        if (pieceClass == BPawn.class) {
-            BPawn bPawn = (BPawn) actor;
-            deletedMoved = bPawn.moved;
-            deletedEnPassantable = bPawn.enPassantable;
+        for (BPawn pawn : getWorld().getObjects(BPawn.class)) {
+            pawn.enPassantable = false;
+        }
+    }
+    public boolean capture(boolean enPassant) {
+        Actor actor = getOneIntersectingObject(Piece.class);
+        if (!(actor instanceof Piece) || actor instanceof WKing || actor instanceof BKing) {
+            setLocation(currentX, currentY);
+            return false;
+        }
+        Class<? extends Piece> capturedClass = actor.getClass().asSubclass(Piece.class);
+        boolean moved = false;
+        boolean enPassantable = false;
+        if (actor instanceof WPawn) {
+            moved = ((WPawn) actor).moved;
+            enPassantable = ((WPawn) actor).enPassantable;
+        } else if (actor instanceof BPawn) {
+            moved = ((BPawn) actor).moved;
+            enPassantable = ((BPawn) actor).enPassantable;
         }
         removeTouching(Piece.class);
         if (!inCheck()) {
             currentX = getX();
             currentY = getY();
             turn *= -1;
-            if (!enPassant) {
-                List<WPawn> wPawns = getWorld().getObjects(WPawn.class);
-                for (WPawn pawn : wPawns) {
-                    pawn.enPassantable = false;
-                }
-                List<BPawn> bPawns = getWorld().getObjects(BPawn.class);
-                for (BPawn pawn : bPawns) {
-                    pawn.enPassantable = false;
-                }
+            clearEnPassantFlags();
+            if (!(this instanceof WPawn) && !(this instanceof BPawn)) {
+                updateGameState();
             }
-        } else {
-            try {
-                Piece newPiece = pieceClass.newInstance();
-                getWorld().addObject(newPiece, getX(), getY());
-                newPiece.currentX = newPiece.getX();
-                newPiece.currentY = newPiece.getY();
-                if (turn == 1) {
-                    newPiece.colour = -1;
-                } else {
-                    newPiece.colour = 1;
-                }
-                if (newPiece.getClass() == WPawn.class) {
-                    WPawn wPawn = (WPawn) newPiece;
-                    wPawn.moved = deletedMoved;
-                    wPawn.enPassantable = deletedEnPassantable;
-                }
-                if (newPiece.getClass() == BPawn.class) {
-                    BPawn bPawn = (BPawn) newPiece;
-                    bPawn.moved = deletedMoved;
-                    bPawn.enPassantable = deletedEnPassantable;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            setLocation(currentX, currentY);
+            return true;
         }
+        try {
+            Piece restored = capturedClass.newInstance();
+            getWorld().addObject(restored, getX(), getY());
+            restored.currentX = restored.getX();
+            restored.currentY = restored.getY();
+            restored.colour = -colour;
+            if (restored instanceof WPawn) {
+                ((WPawn) restored).moved = moved;
+                ((WPawn) restored).enPassantable = enPassantable;
+            } else if (restored instanceof BPawn) {
+                ((BPawn) restored).moved = moved;
+                ((BPawn) restored).enPassantable = enPassantable;
+            }
+        } catch (Exception exception) {
+            exception.printStackTrace();
+        }
+        setLocation(currentX, currentY);
+        return false;
     }
 
     public boolean inCheck() {
-        boolean oldWInCheck = WhitePiece.inCheck;
-        boolean oldBInCheck = BlackPiece.inCheck;
-        WhitePiece.inCheck = false;
-        BlackPiece.inCheck = false;
-        int wKingX = getWorld().getObjects(WKing.class).get(0).getX();
-        int wKingY = getWorld().getObjects(WKing.class).get(0).getY();
-        int bKingX = getWorld().getObjects(BKing.class).get(0).getX();
-        int bKingY = getWorld().getObjects(BKing.class).get(0).getY();
-        if ((wKingX != 0) && (wKingY != 0)) {
-            List<BPawn> checkingPawnL = getWorld().getObjectsAt(wKingX - 1, wKingY - 1, BPawn.class);
-            BPawn checker = null;
-            if (!checkingPawnL.isEmpty()) {
-                checker = checkingPawnL.get(0);
+        BoardState state = new BoardState(getWorld());
+        WhitePiece.inCheck = state.isInCheck(1);
+        BlackPiece.inCheck = state.isInCheck(-1);
+        return state.isInCheck(turn);
+    }
+
+    void updateGameState() {
+        World world = getWorld();
+        BoardState state = new BoardState(world);
+        WhitePiece.inCheck = state.isInCheck(1);
+        BlackPiece.inCheck = state.isInCheck(-1);
+        checkmate = false;
+        stalemate = false;
+        winner = 0;
+        if (!state.hasAnyLegalMove(turn)) {
+            gameOver = true;
+            if (state.isInCheck(turn)) {
+                checkmate = true;
+                winner = -turn;
+            } else {
+                stalemate = true;
             }
-            if (checker != null) {
-                WhitePiece.inCheck = true;
+            if (world.getObjects(GameOverPopup.class).isEmpty()) {
+                world.addObject(new GameOverPopup(checkmate, winner), 4, 4);
             }
-        }
-        if ((wKingX != 7) && (wKingY != 0)) {
-            List<BPawn> checkingPawnR = getWorld().getObjectsAt(wKingX + 1, wKingY - 1, BPawn.class);
-            BPawn checker = null;
-            if (!checkingPawnR.isEmpty()) {
-                checker = checkingPawnR.get(0);
-            }
-            if (checker != null) {
-                WhitePiece.inCheck = true;
-            }
-        }
-        if ((bKingX != 0) && (bKingY != 7)) {
-            List<WPawn> checkingPawnL = getWorld().getObjectsAt(bKingX - 1, bKingY + 1, WPawn.class);
-            WPawn checker = null;
-            if (!checkingPawnL.isEmpty()) {
-                checker = checkingPawnL.get(0);
-            }
-            if (checker != null) {
-                BlackPiece.inCheck = true;
-            }
-        }
-        if ((bKingX != 7) && (bKingY != 7)) {
-            List <WPawn> checkingPawnR = getWorld().getObjectsAt(bKingX + 1, bKingY + 1, WPawn.class);
-            WPawn checker = null;
-            if (!checkingPawnR.isEmpty()) {
-                checker = checkingPawnR.get(0);
-            }
-            if (checker != null) {
-                BlackPiece.inCheck = true;
-            }
-        }
-        checkDiagonal(wKingX, wKingY, -1, -1, 1);
-        checkDiagonal(wKingX, wKingY, 1, -1, 1);
-        checkDiagonal(wKingX, wKingY, 1, 1, 1);
-        checkDiagonal(wKingX, wKingY, -1, 1, 1);
-        checkHorizontal(wKingX, wKingY, 1, 1);
-        checkHorizontal(wKingX, wKingY, -1, 1);
-        checkVertical(wKingX, wKingY, 1, 1);
-        checkVertical(wKingX, wKingY, -1, 1);
-        checkDiagonal(bKingX, bKingY, -1, -1, -1);
-        checkDiagonal(bKingX, bKingY, 1, -1, -1);
-        checkDiagonal(bKingX, bKingY, 1, 1, -1);
-        checkDiagonal(bKingX, bKingY, -1, 1, -1);
-        checkHorizontal(bKingX, bKingY, 1, -1);
-        checkHorizontal(bKingX, bKingY, -1, -1);
-        checkVertical(bKingX, bKingY, 1, -1);
-        checkVertical(bKingX, bKingY, -1, -1);
-        List<BKnight> bKnights = getWorld().getObjects(BKnight.class);
-        for (BKnight knight : bKnights) {
-            if (((Math.abs(wKingX - knight.getX()) == 1) && (Math.abs(wKingY - knight.getY()) == 2)) || ((Math.abs(wKingX - knight.getX()) == 2) && (Math.abs(wKingY - knight.getY()) == 1))) {
-                WhitePiece.inCheck = true;
-            }
-        }
-        List<WKnight> wKnights = getWorld().getObjects(WKnight.class);
-        for (WKnight knight : wKnights) {
-            if (((Math.abs(bKingX - knight.getX()) == 1) && (Math.abs(bKingY - knight.getY()) == 2)) || ((Math.abs(bKingX - knight.getX()) == 2) && (Math.abs(bKingY - knight.getY()) == 1))) {
-                BlackPiece.inCheck = true;
-            }
-        }
-        Piece wKing = getWorld().getObjects(WKing.class).get(0);
-        List <BKing> aroundKing = wKing.getNeighbours(1, true, BKing.class);
-        if (!aroundKing.isEmpty()) {
-            return true;
-        }
-        if ((turn == 1) && (WhitePiece.inCheck == true)) {
-            WhitePiece.inCheck = oldWInCheck;
-            BlackPiece.inCheck = oldBInCheck;
-            return true;
-        } else if ((turn == -1) && (BlackPiece.inCheck == true)) {
-            WhitePiece.inCheck = oldWInCheck;
-            BlackPiece.inCheck = oldBInCheck;
-            return true;
         } else {
+            gameOver = false;
+        }
+    }
+
+    static boolean isSquareAttacked(World world, int x, int y, int attacker) {
+        return new BoardState(world).isSquareAttacked(x, y, attacker);
+    }
+    private static class BoardState {
+        private final Piece[][] board = new Piece[8][8];
+
+        BoardState(World world) {
+            for (Piece piece : world.getObjects(Piece.class)) {
+                if (inside(piece.getX(), piece.getY())) {
+                    board[piece.getX()][piece.getY()] = piece;
+                }
+            }
+        }
+
+        BoardState(BoardState other) {
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    board[x][y] = other.board[x][y];
+                }
+            }
+        }
+
+        boolean hasAnyLegalMove(int side) {
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    Piece piece = board[x][y];
+                    if (piece == null || piece.colour != side) {
+                        continue;
+                    }
+                    for (int targetX = 0; targetX < 8; targetX++) {
+                        for (int targetY = 0; targetY < 8; targetY++) {
+                            if (isLegalMove(piece, x, y, targetX, targetY, side)) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
             return false;
         }
-    }
 
-    private void checkDiagonal(int startX, int startY, int dx, int dy, int kingColour) {
-        for (int i = 1; i < 8; ++i) {
-            int x = startX + i * dx;
-            int y = startY + i * dy;
-            if (x < 0 || x > 7 || y < 0 || y > 7) {
-                break;
+        boolean isLegalMove(Piece piece, int fromX, int fromY,
+                            int toX, int toY, int side) {
+            if (!inside(toX, toY) || (fromX == toX && fromY == toY)) {
+                return false;
             }
-            List<Piece> piecesAtLocation = getWorld().getObjectsAt(x, y, Piece.class);
-            Piece checker = null;
-            if (!piecesAtLocation.isEmpty()) {
-                checker = piecesAtLocation.get(0);
+            Piece destination = board[toX][toY];
+            if (destination != null && destination.colour == side) {
+                return false;
             }
-            if (checker != null) {
-                if (kingColour == 1 && (checker instanceof BBishop || checker instanceof BQueen)) {
-                    WhitePiece.inCheck = true;
-                } else if (kingColour == -1 && (checker instanceof WBishop || checker instanceof WQueen)){
-                    BlackPiece.inCheck = true;
-                } else {
-                    break;
-                }
+            if (destination instanceof WKing || destination instanceof BKing) {
+                return false;
             }
+            if ((piece instanceof WKing || piece instanceof BKing)
+                    && Math.abs(toX - fromX) == 2 && fromY == toY) {
+                return isLegalCastle(fromX, fromY, toX, side);
+            }
+            if (!isPseudoMove(piece, fromX, fromY, toX, toY)) {
+                return false;
+            }
+            BoardState next = new BoardState(this);
+            next.board[fromX][fromY] = null;
+            if ((piece instanceof WPawn || piece instanceof BPawn)
+                    && destination == null && Math.abs(toX - fromX) == 1) {
+                next.board[toX][fromY] = null;
+            }
+            next.board[toX][toY] = piece;
+            return !next.isInCheck(side);
         }
-    }
 
-    private void checkHorizontal(int startX, int startY, int dx, int kingColour) {
-        for (int i = 1; i < 8; ++i) {
-            int x = startX + i * dx;
-            if (x < 0 || x > 7) {
-                break;
+        private boolean isLegalCastle(int fromX, int fromY, int toX, int side) {
+            boolean shortCastle = toX > fromX;
+            int rookX = shortCastle ? 7 : 0;
+            int throughX = shortCastle ? 5 : 3;
+            int destinationX = shortCastle ? 6 : 2;
+            boolean rights = side == 1
+                ? (shortCastle ? WhitePiece.canCastleShort : WhitePiece.canCastleLong)
+                : (shortCastle ? BlackPiece.canCastleShort : BlackPiece.canCastleLong);
+            if (!rights || fromX != 4 || toX != destinationX
+                    || (side == 1 ? fromY != 7 : fromY != 0)) {
+                return false;
             }
-            List<Piece> piecesAtLocation = getWorld().getObjectsAt(x, startY, Piece.class);
-            Piece checker = null;
-            if (!piecesAtLocation.isEmpty()) {
-                checker = piecesAtLocation.get(0);
+            Piece rook = board[rookX][fromY];
+            if ((side == 1 && !(rook instanceof WRook))
+                    || (side == -1 && !(rook instanceof BRook))) {
+                return false;
             }
-            if (checker != null) {
-                if (kingColour == 1 && (checker instanceof BRook || checker instanceof BQueen)) {
-                    WhitePiece.inCheck = true;
-                } else if (kingColour == -1 && (checker instanceof WRook || checker instanceof WQueen)) {
-                    BlackPiece.inCheck = true;
-                } else {
-                    break;
+            int step = shortCastle ? 1 : -1;
+            for (int x = fromX + step; x != rookX; x += step) {
+                if (board[x][fromY] != null) {
+                    return false;
                 }
             }
+            if (isInCheck(side) || isSquareAttacked(throughX, fromY, -side)
+                    || isSquareAttacked(destinationX, fromY, -side)) {
+                return false;
+            }
+            BoardState next = new BoardState(this);
+            next.board[fromX][fromY] = null;
+            next.board[rookX][fromY] = null;
+            next.board[destinationX][fromY] = board[fromX][fromY];
+            next.board[shortCastle ? 5 : 3][fromY] = rook;
+            return !next.isInCheck(side);
         }
-    }
 
-    private void checkVertical(int startX, int startY, int dy, int kingColour) {
-        for (int i = 1; i < 8; ++i) {
-            int y = startY + i * dy;
-            if (y < 0 || y > 7) {
-                break;
+        private boolean isPseudoMove(Piece piece, int fromX, int fromY,
+                                     int toX, int toY) {
+            int dx = toX - fromX;
+            int dy = toY - fromY;
+            int absX = Math.abs(dx);
+            int absY = Math.abs(dy);
+            Piece destination = board[toX][toY];
+            if (piece instanceof WPawn || piece instanceof BPawn) {
+                int direction = piece.colour == 1 ? -1 : 1;
+                int distance = dy * direction;
+                if (dx == 0 && destination == null && distance == 1) {
+                    return true;
+                }
+                if (dx == 0 && destination == null && distance == 2
+                        && pawnHasNotMoved(piece)
+                        && board[fromX][fromY + direction] == null) {
+                    return true;
+                }
+                if (absX == 1 && distance == 1) {
+                    if (destination != null && destination.colour != piece.colour) {
+                        return true;
+                    }
+                    Piece adjacent = board[toX][fromY];
+                    return destination == null
+                        && isEnPassantPawn(adjacent, -piece.colour);
+                }
+                return false;
             }
-            List<Piece> piecesAtLocation = getWorld().getObjectsAt(startX, y, Piece.class);
-            Piece checker = null;
-            if (!piecesAtLocation.isEmpty()) {
-                checker = piecesAtLocation.get(0);
+            if (piece instanceof WKnight || piece instanceof BKnight) {
+                return (absX == 1 && absY == 2) || (absX == 2 && absY == 1);
             }
-            if (checker != null) {
-                if (kingColour == 1 && (checker instanceof BRook || checker instanceof BQueen)) {
-                    WhitePiece.inCheck = true;
-                } else if (kingColour == -1 && (checker instanceof WRook || checker instanceof WQueen)){
-                    BlackPiece.inCheck = true;
-                } else {
-                    break;
+            if (piece instanceof WKing || piece instanceof BKing) {
+                return absX <= 1 && absY <= 1;
+            }
+            if (piece instanceof WRook || piece instanceof BRook) {
+                return (dx == 0 || dy == 0) && clearPath(fromX, fromY, toX, toY);
+            }
+            if (piece instanceof WBishop || piece instanceof BBishop) {
+                return absX == absY && clearPath(fromX, fromY, toX, toY);
+            }
+            if (piece instanceof WQueen || piece instanceof BQueen) {
+                return ((dx == 0 || dy == 0) || absX == absY)
+                    && clearPath(fromX, fromY, toX, toY);
+            }
+            return false;
+        }
+        private boolean pawnHasNotMoved(Piece piece) {
+            return piece instanceof WPawn
+                ? !((WPawn) piece).moved
+                : !((BPawn) piece).moved;
+        }
+
+        private boolean isEnPassantPawn(Piece piece, int expectedColour) {
+            if (piece == null || piece.colour != expectedColour) {
+                return false;
+            }
+            if (piece instanceof WPawn) {
+                return ((WPawn) piece).enPassantable;
+            }
+            if (piece instanceof BPawn) {
+                return ((BPawn) piece).enPassantable;
+            }
+            return false;
+        }
+
+        private boolean clearPath(int fromX, int fromY, int toX, int toY) {
+            int stepX = Integer.signum(toX - fromX);
+            int stepY = Integer.signum(toY - fromY);
+            int x = fromX + stepX;
+            int y = fromY + stepY;
+            while (x != toX || y != toY) {
+                if (board[x][y] != null) {
+                    return false;
+                }
+                x += stepX;
+                y += stepY;
+            }
+            return true;
+        }
+
+        boolean isInCheck(int side) {
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    Piece piece = board[x][y];
+                    if (piece != null && piece.colour == side
+                            && (piece instanceof WKing || piece instanceof BKing)) {
+                        return isSquareAttacked(x, y, -side);
+                    }
                 }
             }
+            return true;
+        }
+
+        boolean isSquareAttacked(int targetX, int targetY, int attacker) {
+            for (int x = 0; x < 8; x++) {
+                for (int y = 0; y < 8; y++) {
+                    Piece piece = board[x][y];
+                    if (piece == null || piece.colour != attacker) {
+                        continue;
+                    }
+                    int dx = targetX - x;
+                    int dy = targetY - y;
+                    int absX = Math.abs(dx);
+                    int absY = Math.abs(dy);
+                    if (piece instanceof WPawn || piece instanceof BPawn) {
+                        int direction = attacker == 1 ? -1 : 1;
+                        if (absX == 1 && dy == direction) {
+                            return true;
+                        }
+                    } else if (piece instanceof WKnight || piece instanceof BKnight) {
+                        if ((absX == 1 && absY == 2) || (absX == 2 && absY == 1)) {
+                            return true;
+                        }
+                    } else if (piece instanceof WKing || piece instanceof BKing) {
+                        if (absX <= 1 && absY <= 1 && (absX != 0 || absY != 0)) {
+                            return true;
+                        }
+                    } else if (piece instanceof WRook || piece instanceof BRook) {
+                        if ((dx == 0 || dy == 0) && clearPath(x, y, targetX, targetY)) {
+                            return true;
+                        }
+                    } else if (piece instanceof WBishop || piece instanceof BBishop) {
+                        if (absX == absY && clearPath(x, y, targetX, targetY)) {
+                            return true;
+                        }
+                    } else if (piece instanceof WQueen || piece instanceof BQueen) {
+                        if (((dx == 0 || dy == 0) || absX == absY)
+                                && clearPath(x, y, targetX, targetY)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        private static boolean inside(int x, int y) {
+            return x >= 0 && x < 8 && y >= 0 && y < 8;
         }
     }
 }
