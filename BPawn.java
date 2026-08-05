@@ -1,5 +1,4 @@
 import greenfoot.*;  // (World, Actor, GreenfootImage, Greenfoot and MouseInfo)
-import javax.swing.JOptionPane;
 public class BPawn extends BlackPiece
 {
     boolean moved = false;
@@ -40,35 +39,38 @@ public class BPawn extends BlackPiece
                 setLocation(currentX, currentY);
             }
             if ((moveType != 0) && (currentY == 7)) { // promotion
-                String[] options = {"Queen", "Rook", "Bishop", "Knight"};
-                String choice = (String) JOptionPane.showInputDialog(
-                        null,
-                        "Choose piece for promotion:",
-                        "Pawn Promotion",
-                        JOptionPane.QUESTION_MESSAGE,
-                        null,
-                        options,
-                        options[0]
+                String choice = Greenfoot.ask(
+                        "Choose a piece for promotion: Queen, Rook, Bishop, or Knight"
                     );
-                if (choice == "Queen") {
+                if (choice == null) {
+                    choice = "Queen";
+                }
+                choice = choice.trim();
+                if (!("Queen".equalsIgnoreCase(choice)
+                        || "Rook".equalsIgnoreCase(choice)
+                        || "Bishop".equalsIgnoreCase(choice)
+                        || "Knight".equalsIgnoreCase(choice))) {
+                    choice = "Queen";
+                }
+                if ("Queen".equalsIgnoreCase(choice)) {
                     BQueen bQueen = new BQueen();
                     getWorld().addObject(bQueen,currentX,currentY);
                     bQueen.currentX = currentX;
                     bQueen.currentY = currentY;
                     bQueen.colour = -1;
-                } else if (choice == "Rook") {
+                } else if ("Rook".equalsIgnoreCase(choice)) {
                     BRook bRook = new BRook();
                     getWorld().addObject(bRook,currentX,currentY);
                     bRook.currentX = currentX;
                     bRook.currentY = currentY;
                     bRook.colour = -1;
-                } else if (choice == "Bishop") {
+                } else if ("Bishop".equalsIgnoreCase(choice)) {
                     BBishop bBishop = new BBishop();
                     getWorld().addObject(bBishop,currentX,currentY);
                     bBishop.currentX = currentX;
                     bBishop.currentY = currentY;
                     bBishop.colour = -1;
-                } else if (choice == "Knight") {
+                } else if ("Knight".equalsIgnoreCase(choice)) {
                     BKnight bKnight = new BKnight();
                     getWorld().addObject(bKnight,currentX,currentY);
                     bKnight.currentX = currentX;

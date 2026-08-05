@@ -1,5 +1,4 @@
 import greenfoot.*;  // (World, Actor, GreenfootImage, Greenfoot and MouseInfo)
-import javax.swing.JOptionPane;
 public class WPawn extends WhitePiece
 {
     boolean moved = false;
@@ -40,35 +39,38 @@ public class WPawn extends WhitePiece
                 setLocation(currentX, currentY);
             }
             if ((moveType != 0) && (currentY == 0)) { // promotion
-                String[] options = {"Queen", "Rook", "Bishop", "Knight"};
-                String choice = (String) JOptionPane.showInputDialog(
-                        null,
-                        "Choose piece for promotion:",
-                        "Pawn Promotion",
-                        JOptionPane.QUESTION_MESSAGE,
-                        null,
-                        options,
-                        options[0]
+                String choice = Greenfoot.ask(
+                        "Choose a piece for promotion: Queen, Rook, Bishop, or Knight"
                     );
-                if (choice.equals("Queen")) {
+                if (choice == null) {
+                    choice = "Queen";
+                }
+                choice = choice.trim();
+                if (!("Queen".equalsIgnoreCase(choice)
+                        || "Rook".equalsIgnoreCase(choice)
+                        || "Bishop".equalsIgnoreCase(choice)
+                        || "Knight".equalsIgnoreCase(choice))) {
+                    choice = "Queen";
+                }
+                if ("Queen".equalsIgnoreCase(choice)) {
                     WQueen wQueen = new WQueen();
                     getWorld().addObject(wQueen,currentX,currentY);
                     wQueen.currentX = currentX;
                     wQueen.currentY = currentY;
                     wQueen.colour = 1;
-                } else if (choice.equals("Rook")) {
+                } else if ("Rook".equalsIgnoreCase(choice)) {
                     WRook wRook = new WRook();
                     getWorld().addObject(wRook,currentX,currentY);
                     wRook.currentX = currentX;
                     wRook.currentY = currentY;
                     wRook.colour = 1;
-                } else if (choice.equals("Bishop")) {
+                } else if ("Bishop".equalsIgnoreCase(choice)) {
                     WBishop wBishop = new WBishop();
                     getWorld().addObject(wBishop,currentX,currentY);
                     wBishop.currentX = currentX;
                     wBishop.currentY = currentY;
                     wBishop.colour = 1;
-                } else if (choice.equals("Knight")) {
+                } else if ("Knight".equalsIgnoreCase(choice)) {
                     WKnight wKnight = new WKnight();
                     getWorld().addObject(wKnight,currentX,currentY);
                     wKnight.currentX = currentX;
